@@ -1,4 +1,7 @@
-.PHONY: buildstubs
+.PHONY: buildstubs download
+
+download:
+	curl -L -o bioformats_jar/bioformats_package.jar https://downloads.openmicroscopy.org/bio-formats/latest/artifacts/bioformats_package.jar
 
 buildstubs:
 	pip install git+https://gitlab.cern.ch/scripting-tools/stubgenj.git

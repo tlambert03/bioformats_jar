@@ -3,7 +3,6 @@ name: CI
 on:
   push:
     branches:
-      - master
       - main
     tags:
       - "v*"
@@ -28,15 +27,19 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '11'
+          check-latest: true
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools tox tox-gh-actions
+          pip install .
 
-      - name: Test with tox
-        run: tox
-        env:
-          PLATFORM: ${{ matrix.platform }}
+      - name: Test
+        run: pytest -v
 
       - name: Coverage
         if: runner.os == 'Linux'
