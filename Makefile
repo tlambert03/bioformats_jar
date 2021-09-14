@@ -2,6 +2,7 @@
 
 download:
 	curl -L -o bioformats_jar/bioformats_package.jar https://downloads.openmicroscopy.org/bio-formats/latest/artifacts/bioformats_package.jar
+	python -c "import bioformats_jar; print(bioformats_jar.__version__)"
 
 buildstubs:
 	pip install git+https://gitlab.cern.ch/scripting-tools/stubgenj.git

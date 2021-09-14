@@ -59,12 +59,13 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: install
+      - name: build
         run: |
           git tag
           pip install --upgrade pip
-          pip install -U setuptools setuptools_scm wheel twine
-          python setup.py sdist bdist_wheel
+          pip install -U build check-manifest twine
+          check-manifest
+          python -m build
 
       - name: twine check
         run: |
