@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, List, Union
 import jpype
 
 if TYPE_CHECKING:
-    import _loci as _locimod
-    import _ome as _omemod
+    from . import _loci
+    from . import _ome
 
 __all__ = [
     "start_jvm",
@@ -31,7 +31,7 @@ def start_jvm(
     attach_thread=ATTACH_THREAD,
     memory="1024m",
     **kwargs,
-):
+) -> None:
     """Start the Java virtual machine with `jpype.startJVM`.
 
     Parameters
@@ -56,7 +56,7 @@ def start_jvm(
 
 
 @lru_cache()
-def get_loci(log_level: str = LOG_LEVEL) -> "_locimod.__module_protocol__":
+def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
     """Start JVM (if necessary) and get the `loci` module
 
     Parameters
@@ -83,7 +83,7 @@ def set_loci_log_level(level):
 
 
 @lru_cache()
-def get_ome() -> "_omemod.__module_protocol__":
+def get_ome() -> "_ome.__module_protocol__":
     """Start JVM (if necessary) and get the `ome` module"""
     start_jvm()
     return jpype.JPackage("ome")

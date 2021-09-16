@@ -12,3 +12,4 @@ class __module_protocol__(typing.Protocol):
     formats: bioformats_jar._loci.formats.__module_protocol__
     plugins: bioformats_jar._loci.plugins.__module_protocol__
     poi: bioformats_jar._loci.poi.__module_protocol__
+    __version__: str
