@@ -1,5 +1,3 @@
-__all__ = ["get_loci", "get_ome", "loci", "ome"]
-
 import os
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, List, Union
@@ -9,6 +7,16 @@ import jpype
 if TYPE_CHECKING:
     import _loci as _locimod
     import _ome as _omemod
+
+__all__ = [
+    "start_jvm",
+    "get_loci",
+    "set_loci_log_level",
+    "get_ome",
+    "loci",
+    "ome",
+    "__version__",
+]
 
 
 _BFJAR = os.path.join(os.path.dirname(__file__), "bioformats_package.jar")

@@ -15,4 +15,5 @@ buildstubs:
 
 	find ome-stubs -type f -exec sed -i '' 's/ ome\./ bioformats_jar\._ome\./g' {} +
 	find ome-stubs -type f -exec sed -i '' 's/import ome/import bioformats_jar\._ome/g' {} +
+	find ome-stubs -type f -exec sed -i '' 's/\[ome/[bioformats_jar\._ome/g' {} +
 	mv ome-stubs bioformats_jar/_ome
