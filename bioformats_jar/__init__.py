@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING, Any, List, Union
 import jpype
 
 if TYPE_CHECKING:
-    from . import _loci
-    from . import _ome
+    from . import _loci, _ome
 
 __all__ = [
     "start_jvm",
@@ -21,7 +20,8 @@ __all__ = [
 
 _BFJAR = os.path.join(os.path.dirname(__file__), "bioformats_package.jar")
 LOG_LEVEL = os.getenv("BIOFORMATS_LOG_LEVEL", "ERROR")
-ATTACH_THREAD = os.getenv("BIOFORMATS_ATTACH_THREAD", True)
+ATTACH_THREAD = os.getenv("BIOFORMATS_ATTACH_THREAD") in ("1", "True", "true")
+JAVA_MEM = os.getenv("BIOFORMATS_MEMORY", "512m")
 JAR = os.getenv("BIOFORMATS_JAR", _BFJAR)
 
 
@@ -29,7 +29,7 @@ JAR = os.getenv("BIOFORMATS_JAR", _BFJAR)
 def start_jvm(
     classpath: Union[str, List[str]] = JAR,
     attach_thread=ATTACH_THREAD,
-    memory="1024m",
+    memory=JAVA_MEM,
     **kwargs,
 ) -> None:
     """Start the Java virtual machine with `jpype.startJVM`.
@@ -39,10 +39,11 @@ def start_jvm(
     classpath : str or List[str], optional
         jar path or list of jar paths, by default the bioformats_package.jar
     attach_thread : [type], optional
-        If `True`, attaches the current thread to the JVM as a user thread. by default True.
-        Can also be set with the "BIOFORMATS_ATTACH_THREAD" environment variable
+        If `True`, attaches the current thread to the JVM as a user thread. by default
+        True. Can also be set with the "BIOFORMATS_ATTACH_THREAD" environment variable
     memory : str, optional
-        Java memory to use, by default "1024m"
+        Java memory to use, by default "512m".
+        Can also be set with the "BIOFORMATS_MEMORY" environment variable
     """
     if jpype.isJVMStarted():
         return
@@ -62,8 +63,8 @@ def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
     Parameters
     ----------
     log_level : str
-        the logging level for loci tools.  by default "ERROR". Can also be set by setting
-        the 'BIOFORMATS_LOG_LEVEL' environment variable.
+        the logging level for loci tools.  by default "ERROR". Can also be set by
+        setting the 'BIOFORMATS_LOG_LEVEL' environment variable.
 
     Returns
     -------
