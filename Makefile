@@ -1,7 +1,11 @@
 .PHONY: buildstubs download
 
 download:
-	curl -L -o bioformats_jar/bioformats_package.jar https://downloads.openmicroscopy.org/bio-formats/latest/artifacts/bioformats_package.jar
+	curl -L -o bioformats_package.jar https://downloads.openmicroscopy.org/bio-formats/latest/artifacts/bioformats_package.jar
+	curl -L -o bioformats_package.jar.sha1 https://downloads.openmicroscopy.org/bio-formats/latest/artifacts/bioformats_package.jar.sha1
+	shasum -c bioformats_package.jar.sha1
+	mv bioformats_package.jar bioformats_jar
+	rm bioformats_package.jar.sha1
 	python -c "import bioformats_jar; print(bioformats_jar.__version__)"
 
 buildstubs:
