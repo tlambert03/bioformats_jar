@@ -38,6 +38,7 @@ def start_jvm(
     ----------
     classpath : str or List[str], optional
         jar path or list of jar paths, by default the bioformats_package.jar
+        Can also be set with the "BIOFORMATS_JAR" environment variable
     attach_thread : [type], optional
         If `True`, attaches the current thread to the JVM as a user thread. by default
         True. Can also be set with the "BIOFORMATS_ATTACH_THREAD" environment variable
