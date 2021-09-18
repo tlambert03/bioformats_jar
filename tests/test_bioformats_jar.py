@@ -20,6 +20,15 @@ def test_import():
     assert loci.poi
 
 
+def test_loci():
+    from bioformats_jar.bf import LociFile
+
+    with LociFile(str(Path(__file__).parent / "sample.czi")) as lf:
+        d = lf.to_dask()
+
+    d.mean().compute()
+
+
 def test_read():
     loci = get_loci()
     reader = loci.formats.ImageReader()
