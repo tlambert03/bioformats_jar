@@ -28,6 +28,30 @@ def test_loci():
     d.mean().compute()
 
 
+def test_loci2():
+    from bioformats_jar.bf import LociFile
+
+    with LociFile(str(Path(__file__).parent / "sample.czi")) as lf:
+        assert lf.ome_metadata
+
+
+
+def test_loci3():
+    from bioformats_jar.bf import BioformatsReader
+
+    r = BioformatsReader(str(Path(__file__).parent / "sample.czi"))
+    r._to_xarray()
+
+
+def test_loci4():
+    from bioformats_jar.bf import LociFile
+
+    with LociFile(str(Path(__file__).parent / "sample.czi")) as lf:
+        d = lf.to_dask()
+
+    d.mean().compute()
+
+
 def test_read():
     loci = get_loci()
     reader = loci.formats.ImageReader()

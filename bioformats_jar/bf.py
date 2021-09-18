@@ -63,9 +63,9 @@ class BioformatsReader:
         except Exception:
             return False
 
-    def __init__(self, image: types.PathLike):
+    def __init__(self, image):
 
-        self._fs, self._path = io_utils.pathlike_to_fs(image, enforce_exists=True)
+        self._path = image
 
         try:
             with LociFile(self._path) as rdr:
