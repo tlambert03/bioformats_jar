@@ -1,25 +1,150 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from functools import lru_cache
 from threading import Lock
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import numpy as np
+import xarray as xr
+from ome_types import OME
 from wrapt import ObjectProxy
+import dask.array as da
+
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import dask.array as da
-
     from bioformats_jar import loci
+    from fsspec.spec import AbstractFileSystem
+
+
+try:
+    from bioformats_jar import get_loci
+except ImportError:
+    raise ImportError(
+        "bioformats_jar is required for this reader. "
+        "Install with `pip install aicsimageio[bioformats]`"
+    )
+
+
+def get_ome_metadata(path: types.PathLike, original_meta: bool = False) -> OME:
+    """Helper to retrieve OME meta from any compatible file, using bioformats."""
+    with LociFile(path, meta=True, original_meta=original_meta, memoize=False) as lf:
+        return lf.ome_metadata
+
+
+class BioformatsReader(Reader):
+    """Bioformats reader using bioformats_jar and jpype.
+
+    Parameters
+    ----------
+    image : types.PathLike
+        path to file
+
+    Raises
+    ------
+    exceptions.UnsupportedFileFormatError
+        If the file is not supported by bioformats.
+    """
+
+    @staticmethod
+    def _is_supported_image(fs: AbstractFileSystem, path: str, **kwargs: Any) -> bool:
+        try:
+            # TODO: deal with remote data
+            f = LociFile(path, meta=False, memoize=False)
+            f.close()
+            return True
+
+        except Exception:
+            return False
+
+    def __init__(self, image: types.PathLike):
+
+        self._fs, self._path = io_utils.pathlike_to_fs(image, enforce_exists=True)
+
+        try:
+            with LociFile(self._path) as rdr:
+                self._scenes: Tuple[str, ...] = tuple(
+                    metadata_utils.generate_ome_image_id(i)
+                    for i in range(rdr.core_meta.series_count)
+                )
+        except Exception:
+            raise exceptions.UnsupportedFileFormatError(
+                self.__class__.__name__, self._path
+            )
+
+    @property
+    def scenes(self) -> Tuple[str, ...]:
+        return self._scenes
+
+    def _read_delayed(self) -> xr.DataArray:
+        return self._to_xarray(delayed=True)
+
+    def _read_immediate(self) -> xr.DataArray:
+        return self._to_xarray(delayed=False)
+
+    @cached_property
+    def ome_metadata(self) -> OME:
+        with LociFile(self._path) as rdr:
+            meta = rdr.ome_metadata
+        return meta
+
+    @property
+    def physical_pixel_sizes(self) -> PhysicalPixelSizes:
+        px = self.ome_metadata.images[self.current_scene_index].pixels
+        return PhysicalPixelSizes(
+            px.physical_size_z, px.physical_size_y, px.physical_size_x
+        )
+
+    def _to_xarray(self, delayed: bool = True) -> xr.DataArray:
+        # TODO: put in a utils method somewhere?
+        from .ome_tiff_reader import OmeTiffReader
+
+        with LociFile(self._path) as rdr:
+            image_data = rdr.to_dask() if delayed else rdr.to_numpy()
+            xml = rdr.ome_xml
+            ome = rdr.ome_metadata
+            rgb = rdr.core_meta.is_rgb
+            _, coords = OmeTiffReader._get_dims_and_coords_from_ome(
+                ome=ome,
+                scene_index=self.current_scene_index,
+            )
+
+        return xr.DataArray(
+            image_data,
+            dims=dimensions.DEFAULT_DIMENSION_ORDER_LIST_WITH_SAMPLES
+            if rgb
+            else dimensions.DEFAULT_DIMENSION_ORDER_LIST,
+            coords=coords,  # type: ignore
+            attrs={
+                METADATA_UNPROCESSED: xml,
+                METADATA_PROCESSED: ome,
+            },
+        )
+
+    @staticmethod
+    def bioformats_version() -> str:
+        from bioformats_jar import get_loci
+
+        return get_loci().__version__
 
 
 class CoreMeta(NamedTuple):
     """NamedTuple with core bioformats metadata. (not OME meta)"""
 
-    shape: tuple[int, int, int, int, int, int]
+    shape: Tuple[int, int, int, int, int, int]
     dtype: str
     series_count: int
     is_rgb: bool
@@ -54,14 +179,12 @@ class LociFile:
 
     def __init__(
         self,
-        path: str | Path,
+        path: Union[str, "Path"],
         series: int = 0,
         meta: bool = True,
         original_meta: bool = False,
-        memoize: int | bool = 0,
+        memoize: Union[int, bool] = 0,
     ):
-        from bioformats_jar import get_loci
-
         loci = get_loci()
         self._path = str(path)
         self._r = loci.formats.ImageReader()
@@ -120,13 +243,12 @@ class LociFile:
         except (AttributeError, ImportError, RuntimeError):
             pass
 
-    def to_numpy(self, series: int | None = None) -> np.ndarray:
+    def to_numpy(self, series: Optional[int] = None) -> np.ndarray:
         """Create numpy array for the current series."""
         return np.asarray(self.to_dask(series))
 
-    def to_dask(self, series: int | None = None) -> da.Array:
+    def to_dask(self, series: Optional[int] = None) -> "da.Array":
         """Create dask array for the current series."""
-        import dask.array as da
 
         if series is not None:
             self._r.setSeries(series)
@@ -161,7 +283,13 @@ class LociFile:
 
             return str(store.dumpXML()) if store else ""
 
-    def __enter__(self) -> LociFile:
+    @property
+    def ome_metadata(self) -> OME:
+        """Return OME object parsed by ome_types."""
+        xml = metadata_utils.clean_ome_xml_for_known_issues(self.ome_xml)
+        return OME.from_xml(xml)
+
+    def __enter__(self) -> "LociFile":
         if not self.is_open:
             self.open()
         return self
@@ -207,7 +335,7 @@ class LociFile:
                 self.close()
         return im
 
-    def _dask_chunk(self, block_id: tuple[int, ...]) -> np.ndarray:
+    def _dask_chunk(self, block_id: Tuple[int, ...]) -> np.ndarray:
         # if someone indexes a 5D dask array as `arr[0,1,2]`, then the `info`
         # dict will contain the key: 'chunk-location': (0, 1, 2, 0, 0)
         # reader.getIndex() expects (Z, C, T) ...
@@ -219,7 +347,7 @@ class LociFile:
         im = self._get_plane(t, c, z)
         return im[np.newaxis, np.newaxis, np.newaxis]
 
-    _service: loci.common.services.ServiceFactory | None = None
+    _service: Optional["loci.common.services.ServiceFactory"] = None
 
     @classmethod
     def _create_ome_meta(cls) -> Any:
@@ -236,7 +364,7 @@ def _pixtype2dtype(pixeltype: int, little_endian: bool) -> str:
     from bioformats_jar import loci
 
     FT = loci.formats.FormatTools
-    fmt2type: dict[int, str] = {
+    fmt2type: Dict[int, str] = {
         FT.INT8: "i1",
         FT.UINT8: "u1",
         FT.INT16: "i2",
@@ -310,7 +438,7 @@ class _ArrayMethodProxy:
         return result
 
 
-def _slice2width(slc: slice, length: int) -> tuple[int, int]:
+def _slice2width(slc: slice, length: int) -> Tuple[int, int]:
     """convert `slice` object into (start, width)"""
     if slc.stop is not None or slc.start is not None:
         # NOTE: we're ignoring step != 1 here
