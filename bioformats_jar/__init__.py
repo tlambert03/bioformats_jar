@@ -25,7 +25,6 @@ JAVA_MEM = os.getenv("BIOFORMATS_MEMORY", "512m")
 JAR = os.getenv("BIOFORMATS_JAR", _BFJAR)
 
 
-@lru_cache()
 def start_jvm(
     classpath: Union[str, List[str]] = JAR,
     attach_thread=ATTACH_THREAD,
@@ -57,7 +56,10 @@ def start_jvm(
     #         java.lang.Thread.attach()
 
 
-@lru_cache()
+_LOCI = None
+_OME = None
+
+
 def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
     """Start JVM (if necessary) and get the `loci` module
 
@@ -72,11 +74,13 @@ def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
     loci
         the loci module from bioformats_package.jar
     """
-    start_jvm()
-    loci = jpype.JPackage("loci")
-    loci.common.DebugTools.setRootLevel(log_level)
-    loci.__version__ = loci.formats.FormatTools.VERSION
-    return loci
+    global _LOCI
+    if _LOCI is None:
+        start_jvm()
+        _LOCI = jpype.JPackage("loci")
+        _LOCI.common.DebugTools.setRootLevel(log_level)
+        _LOCI.__version__ = _LOCI.formats.FormatTools.VERSION
+    return _LOCI
 
 
 def set_loci_log_level(level):
@@ -84,12 +88,13 @@ def set_loci_log_level(level):
     get_loci().common.DebugTools.setRootLevel(level)
 
 
-@lru_cache()
 def get_ome() -> "_ome.__module_protocol__":
     """Start JVM (if necessary) and get the `ome` module"""
-    start_jvm()
-    return jpype.JPackage("ome")
-
+    global _OME
+    if _OME is None:
+        start_jvm()
+        _OME = jpype.JPackage("ome")
+    return _OME
 
 def __getattr__(name: str) -> Any:
     if name == "__version__":
