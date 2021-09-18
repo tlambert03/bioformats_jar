@@ -41,7 +41,7 @@ jobs:
           pip install tox
 
       - name: Test
-        run: tox
+        run: tox -e py
 
       - name: Coverage
         if: runner.os == 'Linux'
