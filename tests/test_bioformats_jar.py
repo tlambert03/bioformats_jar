@@ -6,7 +6,6 @@ from bioformats_jar import get_loci
 
 
 def test_import():
-    assert not jpype.isJVMStarted()
     loc = get_loci()
     assert jpype.isJVMStarted()
 
