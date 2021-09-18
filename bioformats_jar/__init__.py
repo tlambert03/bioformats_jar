@@ -51,10 +51,10 @@ def start_jvm(
 
     jpype.startJVM(f"-Xmx{memory}", classpath=classpath, **kwargs)
 
-    if attach_thread:
-        java = jpype.JPackage("java")
-        if not java.lang.Thread.isAttached():
-            java.lang.Thread.attach()
+    # if attach_thread:
+    #     java = jpype.JPackage("java")
+    #     if not java.lang.Thread.isAttached():
+    #         java.lang.Thread.attach()
 
 
 @lru_cache()
