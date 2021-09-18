@@ -22,12 +22,11 @@ from wrapt import ObjectProxy
 import dask.array as da
 
 
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
 
-    import dask.array as da
-    from bioformats_jar import loci
-    from fsspec.spec import AbstractFileSystem
+import dask.array as da
+from bioformats_jar import loci
+from fsspec.spec import AbstractFileSystem
 
 
 try:
@@ -39,13 +38,7 @@ except ImportError:
     )
 
 
-def get_ome_metadata(path: types.PathLike, original_meta: bool = False) -> OME:
-    """Helper to retrieve OME meta from any compatible file, using bioformats."""
-    with LociFile(path, meta=True, original_meta=original_meta, memoize=False) as lf:
-        return lf.ome_metadata
-
-
-class BioformatsReader(Reader):
+class BioformatsReader:
     """Bioformats reader using bioformats_jar and jpype.
 
     Parameters
@@ -77,13 +70,10 @@ class BioformatsReader(Reader):
         try:
             with LociFile(self._path) as rdr:
                 self._scenes: Tuple[str, ...] = tuple(
-                    metadata_utils.generate_ome_image_id(i)
-                    for i in range(rdr.core_meta.series_count)
+                    i for i in range(rdr.core_meta.series_count)
                 )
         except Exception:
-            raise exceptions.UnsupportedFileFormatError(
-                self.__class__.__name__, self._path
-            )
+            raise
 
     @property
     def scenes(self) -> Tuple[str, ...]:
@@ -95,43 +85,22 @@ class BioformatsReader(Reader):
     def _read_immediate(self) -> xr.DataArray:
         return self._to_xarray(delayed=False)
 
-    @cached_property
     def ome_metadata(self) -> OME:
         with LociFile(self._path) as rdr:
             meta = rdr.ome_metadata
         return meta
 
-    @property
-    def physical_pixel_sizes(self) -> PhysicalPixelSizes:
-        px = self.ome_metadata.images[self.current_scene_index].pixels
-        return PhysicalPixelSizes(
-            px.physical_size_z, px.physical_size_y, px.physical_size_x
-        )
-
     def _to_xarray(self, delayed: bool = True) -> xr.DataArray:
         # TODO: put in a utils method somewhere?
-        from .ome_tiff_reader import OmeTiffReader
 
         with LociFile(self._path) as rdr:
             image_data = rdr.to_dask() if delayed else rdr.to_numpy()
             xml = rdr.ome_xml
             ome = rdr.ome_metadata
             rgb = rdr.core_meta.is_rgb
-            _, coords = OmeTiffReader._get_dims_and_coords_from_ome(
-                ome=ome,
-                scene_index=self.current_scene_index,
-            )
 
         return xr.DataArray(
             image_data,
-            dims=dimensions.DEFAULT_DIMENSION_ORDER_LIST_WITH_SAMPLES
-            if rgb
-            else dimensions.DEFAULT_DIMENSION_ORDER_LIST,
-            coords=coords,  # type: ignore
-            attrs={
-                METADATA_UNPROCESSED: xml,
-                METADATA_PROCESSED: ome,
-            },
         )
 
     @staticmethod
@@ -286,8 +255,7 @@ class LociFile:
     @property
     def ome_metadata(self) -> OME:
         """Return OME object parsed by ome_types."""
-        xml = metadata_utils.clean_ome_xml_for_known_issues(self.ome_xml)
-        return OME.from_xml(xml)
+        return OME.from_xml(self.ome_xml)
 
     def __enter__(self) -> "LociFile":
         if not self.is_open:
