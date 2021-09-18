@@ -5,18 +5,18 @@ import jpype
 from bioformats_jar import get_loci
 
 
-def test_import():
-    loc = get_loci()
-    assert jpype.isJVMStarted()
+# def test_import():
+#     loc = get_loci()
+#     assert jpype.isJVMStarted()
 
-    from bioformats_jar import loci
+#     from bioformats_jar import loci
 
-    assert loc is loci
+#     assert loc is loci
 
-    assert loci.formats
-    assert loci.common
-    assert loci.plugins
-    assert loci.poi
+#     assert loci.formats
+#     assert loci.common
+#     assert loci.plugins
+#     assert loci.poi
 
 
 def test_loci():
