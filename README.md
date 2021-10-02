@@ -5,7 +5,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/bioformats_jar.svg?color=green)](https://python.org)
 [![CI](https://github.com/tlambert03/bioformats_jar/actions/workflows/ci.yml/badge.svg)](https://github.com/tlambert03/bioformats_jar/actions/workflows/ci.yml)
 
-_For general pythonic access to jars in the scyjava ecosyste (including bioformats_jar) please use [scyjava](https://github.com/scijava/scyjava) instead_
+_For general pythonic access to jars in the scyjava ecosystem (including bioformats_jar) please use [scyjava](https://github.com/scijava/scyjava) instead_
 
 
 ----
