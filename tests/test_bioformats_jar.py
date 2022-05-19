@@ -1,14 +1,10 @@
 from pathlib import Path
 
-import jpype
-
-from bioformats_jar import get_loci
+from bioformats_jar import get_loci, get_ome, set_loci_log_level
 
 
 def test_import():
-    assert not jpype.isJVMStarted()
     loc = get_loci()
-    assert jpype.isJVMStarted()
 
     from bioformats_jar import loci
 
@@ -16,8 +12,9 @@ def test_import():
 
     assert loci.formats
     assert loci.common
-    assert loci.plugins
     assert loci.poi
+
+    set_loci_log_level("INFO")
 
 
 def test_read():
@@ -29,3 +26,10 @@ def test_read():
     reader.setId(str(Path(__file__).parent / "sample.czi"))
     assert str(reader.getMetadataStore().dumpXML())
     assert reader.openBytes(0)[0] != 0
+
+
+def test_get_ome():
+    o = get_ome()
+    from bioformats_jar import ome
+
+    assert o is ome
