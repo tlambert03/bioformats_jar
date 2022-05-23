@@ -1,14 +1,14 @@
 import os
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, List, Union
+from typing import TYPE_CHECKING, Any
 
 import jpype
+import scyjava
 
 if TYPE_CHECKING:
     from . import _loci, _ome
 
 __all__ = [
-    "start_jvm",
     "get_loci",
     "set_loci_log_level",
     "get_ome",
@@ -18,43 +18,17 @@ __all__ = [
 ]
 
 
-_BFJAR = os.path.join(os.path.dirname(__file__), "bioformats_package.jar")
+BIOFORMATS_VERSION = os.getenv("BIOFORMATS_VERSION", "LATEST")
+BIOFORMATS_LICENSE = os.getenv("BIOFORMATS_LICENSE", "gpl")
+assert BIOFORMATS_LICENSE in {
+    "gpl",
+    "bsd",
+}, "BIOFORMATS_LICENSE env var must be either 'gpl' or 'bsd'"
 LOG_LEVEL = os.getenv("BIOFORMATS_LOG_LEVEL", "ERROR")
-ATTACH_THREAD = os.getenv("BIOFORMATS_ATTACH_THREAD") in ("1", "True", "true")
-JAVA_MEM = os.getenv("BIOFORMATS_MEMORY", "512m")
-JAR = os.getenv("BIOFORMATS_JAR", _BFJAR)
 
-
-@lru_cache()
-def start_jvm(
-    classpath: Union[str, List[str]] = JAR,
-    attach_thread=ATTACH_THREAD,
-    memory=JAVA_MEM,
-    **kwargs,
-) -> None:
-    """Start the Java virtual machine with `jpype.startJVM`.
-
-    Parameters
-    ----------
-    classpath : str or List[str], optional
-        jar path or list of jar paths, by default the bioformats_package.jar
-        Can also be set with the "BIOFORMATS_JAR" environment variable
-    attach_thread : [type], optional
-        If `True`, attaches the current thread to the JVM as a user thread. by default
-        True. Can also be set with the "BIOFORMATS_ATTACH_THREAD" environment variable
-    memory : str, optional
-        Java memory to use, by default "512m".
-        Can also be set with the "BIOFORMATS_MEMORY" environment variable
-    """
-    if jpype.isJVMStarted():
-        return
-
-    jpype.startJVM(f"-Xmx{memory}", classpath=classpath, **kwargs)
-
-    if attach_thread:
-        java = jpype.JPackage("java")
-        if not java.lang.Thread.isAttached():
-            java.lang.Thread.attach()
+scyjava.config.endpoints.append(
+    f"ome:formats-{BIOFORMATS_LICENSE}:{BIOFORMATS_VERSION}"
+)
 
 
 @lru_cache()
@@ -72,10 +46,10 @@ def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
     loci
         the loci module from bioformats_package.jar
     """
-    start_jvm()
+    FormatTools = scyjava.jimport("loci.formats.FormatTools")
     loci = jpype.JPackage("loci")
     loci.common.DebugTools.setRootLevel(log_level)
-    loci.__version__ = loci.formats.FormatTools.VERSION
+    loci.__version__ = FormatTools.VERSION
     return loci
 
 
@@ -87,7 +61,7 @@ def set_loci_log_level(level):
 @lru_cache()
 def get_ome() -> "_ome.__module_protocol__":
     """Start JVM (if necessary) and get the `ome` module"""
-    start_jvm()
+    scyjava.start_jvm()
     return jpype.JPackage("ome")
 
 

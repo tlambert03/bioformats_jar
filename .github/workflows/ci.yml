@@ -11,13 +11,12 @@ on:
 
 jobs:
   test:
-    name: ${{ matrix.platform }} (py${{ matrix.python-version }}, j${{ matrix.java }})
+    name: ${{ matrix.platform }} (py${{ matrix.python-version }})
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
-        java: [8, 11]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, '3.10']
         platform: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -31,7 +30,7 @@ jobs:
       - uses: actions/setup-java@v2
         with:
           distribution: "temurin"
-          java-version: ${{ matrix.java }}
+          java-version: "11"
 
       - name: Install dependencies
         run: |
@@ -43,7 +42,7 @@ jobs:
 
       - name: Coverage
         if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
 
   deploy:
     name: Deploy
