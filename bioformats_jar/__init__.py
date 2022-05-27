@@ -1,12 +1,10 @@
 import os
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import jpype
 import scyjava
 
-if TYPE_CHECKING:
-    from . import _loci, _ome
 
 __all__ = [
     "get_loci",
@@ -32,7 +30,7 @@ scyjava.config.endpoints.append(
 
 
 @lru_cache()
-def get_loci(log_level: str = LOG_LEVEL) -> "_loci.__module_protocol__":
+def get_loci(log_level: str = LOG_LEVEL):
     """Start JVM (if necessary) and get the `loci` module
 
     Parameters
@@ -59,7 +57,7 @@ def set_loci_log_level(level):
 
 
 @lru_cache()
-def get_ome() -> "_ome.__module_protocol__":
+def get_ome():
     """Start JVM (if necessary) and get the `ome` module"""
     scyjava.start_jvm()
     return jpype.JPackage("ome")
