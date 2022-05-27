@@ -1,9 +1,16 @@
 import os
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any
 
 import jpype
 import scyjava
+
+try:
+    __version__ = version("bioformats_jar")
+except PackageNotFoundError:
+    __version__ = "uninstalled"
+
 
 __all__ = [
     "get_loci",
@@ -63,8 +70,6 @@ def get_ome():
 
 
 def __getattr__(name: str) -> Any:
-    if name == "__version__":
-        return get_loci().__version__
     if name == "loci":
         return get_loci()
     if name == "ome":
