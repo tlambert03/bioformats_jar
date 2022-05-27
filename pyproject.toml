@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 ignore = [
   ".pre-commit-config.yaml",
   "Makefile",
+  "tests/*"
 ]
 
 [tool.setuptools_scm]
