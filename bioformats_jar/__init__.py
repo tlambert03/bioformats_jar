@@ -5,7 +5,6 @@ from typing import Any
 import jpype
 import scyjava
 
-
 __all__ = [
     "get_loci",
     "set_loci_log_level",
